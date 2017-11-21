@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 def Preprocessing(data):
     data['Embarked'] = PreproEmbarked(data['Embarked'])
     data['Nameband'] = PreproNameband(data['Name'])
-    data['Age'] = data['Age'].fillna(data['Age'].mean())
+    data['Age'] = PreproAge(data['Age'], data['Nameband'])
     data['Fare'] = data['Fare'].fillna(data['Fare'].mean())
     data["Sex"] = data["Sex"].map({"female": 0, "male": 1}).astype(int)
     data = data.drop('Name', axis=1)
@@ -35,6 +35,28 @@ def PreproNameband(data):
     return nameband
 
 
+def PreproAge(data, filter):
+    ran = range(len(data))
+    data = [transAge(filter[i]) if data.isnull()[i] else data[i] for i in ran]
+    data = pd.Series(data)
+    return data
+
+
+def transAge(cls):
+    if(cls == 0):
+        ret = 22.0
+    elif(cls == 1):
+        ret = 36.0
+    elif(cls == 2):
+        ret = 33.0
+    elif(cls == 2):
+        ret = 5.0
+    elif(cls == 2):
+        ret = 45.0
+    else:
+        ret = 0
+    return ret
+
 # Main
 # Load training data
 train_df = pd.read_csv("./data/train.csv", header=0)
@@ -47,6 +69,7 @@ train_df = Preprocessing(train_df)
 test_df = Preprocessing(test_df)
 # print(train_df.head())
 # print(test_df.head())
+
 
 # Learn
 model = RandomForestClassifier()
