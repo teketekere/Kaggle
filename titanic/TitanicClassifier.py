@@ -1,9 +1,18 @@
 import csv
 import datetime
 import pandas as pd
+from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.ensemble import RandomForestClassifier
+# from sklearn.ensemble import AdaBoostClassifier
+# from sklearn.ensemble import GradientBoostingClassifier
+# from sklearn.svm import SVC
+# from sklearn.cross_validation import KFold
+from SkLearnHelper import SklearnHelper
 
 
+###
+# 前処理系のアレコレ
+###
 def Preprocessing(data):
     data['Embarked'] = PreproEmbarked(data['Embarked'])
     data['Nameband'] = PreproNameband(data['Name'])
@@ -57,31 +66,74 @@ def transAge(cls):
         ret = 0
     return ret
 
-# Main
+
+###
+# SKLEARNの学習器インスタンスをゲット
+###
+# RandomForest
+def GetRFInstance(seed=0):
+    rf_params = {
+        'n_jobs': -1,
+        'n_estimators': 500,
+        'warm_start': True,
+        'max_depth': 6,
+        'min_samples_leaf': 2,
+        'max_features': 'sqrt',
+        'verbose': 0
+    }
+    rf = SklearnHelper(clf=RandomForestClassifier, seed=0, params=rf_params)
+    return rf
+
+
+# ExtraTrees
+def GetETInstance(seed=0):
+    et_params = {
+        'n_jobs': -1,
+        'n_estimators': 500,
+        'max_depth': 8,
+        'min_samples_leaf': 2,
+        'verbose': 0
+    }
+    et = SklearnHelper(clf=ExtraTreesClassifier, seed=0, params=et_params)
+    return et
+
+
+###
+# Predict and Save result to csv
+###
+def SaveTitanicPredictToCsv(model, test, name):
+    pid = test['PassengerId']
+    pred = list()
+    for i in range(len(test)):
+        pred.append(*rf.predict(test.iloc[i:i+1, 1:]))
+    output = pd.DataFrame({'Survived': pred})
+    output['PassengerId'] = pid
+    d = datetime.datetime.now()
+    filename = "./result/{0}res_{1:%Y%m%d%H%M%S}.csv".format(name, d)
+    output.to_csv(filename, index=False)
+
+
+###
+# Main function
+####
+
 # Load training data
 train_df = pd.read_csv("./data/train.csv", header=0)
 test_df = pd.read_csv("./data/test.csv", header=0)
-# print(train_df.isnull().sum())
-# print(test_df.isnull().sum())
 
 # 前処理
 train_df = Preprocessing(train_df)
 test_df = Preprocessing(test_df)
-# print(train_df.head())
-# print(test_df.head())
-
 
 # Learn
-model = RandomForestClassifier()
-model.fit(train_df.iloc[:, 2:], train_df['Survived'])
+# Random Forest
+rf = GetRFInstance()
+rf.fit(train_df.iloc[:, 2:], train_df['Survived'])
+
+# Extra Trees
+et = GetETInstance()
+et.fit(train_df.iloc[:, 2:], train_df['Survived'])
 
 # Predict
-pid = test_df['PassengerId']
-pred = list()
-for i in range(len(test_df)):
-    pred.append(*model.predict(test_df.iloc[i:i+1, 1:]))
-
-output = pd.DataFrame({'PassengerId': pid,
-                      'Survived': pred})
-d = datetime.datetime.now()
-output.to_csv("./result/predict_{0:%Y%m%d%H%M%S}.csv".format(d), index=False)
+SaveTitanicPredictToCsv(rf, test_df, "RF")
+SaveTitanicPredictToCsv(et, test_df, "ET")
