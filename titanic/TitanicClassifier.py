@@ -5,7 +5,7 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.ensemble import RandomForestClassifier
 # from sklearn.ensemble import AdaBoostClassifier
 # from sklearn.ensemble import GradientBoostingClassifier
-# from sklearn.svm import SVC
+from sklearn.svm import SVC
 # from sklearn.cross_validation import KFold
 from SkLearnHelper import SklearnHelper
 
@@ -81,7 +81,7 @@ def GetRFInstance(seed=0):
         'max_features': 'sqrt',
         'verbose': 0
     }
-    rf = SklearnHelper(clf=RandomForestClassifier, seed=0, params=rf_params)
+    rf = SklearnHelper(clf=RandomForestClassifier, seed=seed, params=rf_params)
     return rf
 
 
@@ -94,8 +94,28 @@ def GetETInstance(seed=0):
         'min_samples_leaf': 2,
         'verbose': 0
     }
-    et = SklearnHelper(clf=ExtraTreesClassifier, seed=0, params=et_params)
+    et = SklearnHelper(clf=ExtraTreesClassifier, seed=seed, params=et_params)
     return et
+
+
+def GetRBFSVCInstance(seed=0):
+    # Support Vector Classifier parameters
+    svc_params = {
+        'kernel': 'rbf',
+        'C': 0.025
+        }
+    svc = SklearnHelper(clf=SVC, seed=seed, params=svc_params)
+    return svc
+
+
+def GetLSVCInstance(seed=0):
+    # Support Vector Classifier parameters
+    svc_params = {
+        'kernel': 'linear',
+        'C': 0.025
+        }
+    svc = SklearnHelper(clf=SVC, seed=seed, params=svc_params)
+    return svc
 
 
 ###
@@ -105,7 +125,7 @@ def SaveTitanicPredictToCsv(model, test, name):
     pid = test['PassengerId']
     pred = list()
     for i in range(len(test)):
-        pred.append(*rf.predict(test.iloc[i:i+1, 1:]))
+        pred.append(*model.predict(test.iloc[i:i+1, 1:]))
     output = pd.DataFrame({'Survived': pred})
     output['PassengerId'] = pid
     d = datetime.datetime.now()
@@ -134,6 +154,16 @@ rf.fit(train_df.iloc[:, 2:], train_df['Survived'])
 et = GetETInstance()
 et.fit(train_df.iloc[:, 2:], train_df['Survived'])
 
+# RBFSVC
+rbfsvc = GetRBFSVCInstance()
+rbfsvc.fit(train_df.iloc[:, 2:], train_df['Survived'])
+
+# LSVC
+lsvc = GetLSVCInstance()
+lsvc.fit(train_df.iloc[:, 2:], train_df['Survived'])
+
 # Predict
 SaveTitanicPredictToCsv(rf, test_df, "RF")
 SaveTitanicPredictToCsv(et, test_df, "ET")
+SaveTitanicPredictToCsv(rbfsvc, test_df, "RSVC")
+SaveTitanicPredictToCsv(lsvc, test_df, "LSVC")
