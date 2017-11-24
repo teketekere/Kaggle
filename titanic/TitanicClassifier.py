@@ -5,6 +5,7 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.ensemble import RandomForestClassifier
 # from sklearn.ensemble import AdaBoostClassifier
 # from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 # from sklearn.cross_validation import KFold
 from SkLearnHelper import SklearnHelper
@@ -19,6 +20,7 @@ def Preprocessing(data):
     data['Age'] = PreproAge(data['Age'], data['Nameband'])
     data['Fare'] = data['Fare'].fillna(data['Fare'].mean())
     data["Sex"] = data["Sex"].map({"female": 0, "male": 1}).astype(int)
+    data['FamilySize'] = data['SibSp'] + data['Parch']
     data = data.drop('Name', axis=1)
     data = data.drop('Ticket', axis=1)
     data = data.drop('Cabin', axis=1)
@@ -58,13 +60,25 @@ def transAge(cls):
         ret = 36.0
     elif(cls == 2):
         ret = 33.0
-    elif(cls == 2):
+    elif(cls == 3):
         ret = 5.0
-    elif(cls == 2):
+    elif(cls == 4):
         ret = 45.0
     else:
         ret = 0
     return ret
+
+
+###
+# trainセットのスプリット
+# <param>
+# tra:訓練用データ
+# lab:正解ラベル
+# ts:テストサイズの割合
+###
+def splitTrainSet(tra, lab, ts):
+    Xtra, Xte, ytra, yte = train_test_split(tra, lab, test_size=ts)
+    return Xtra, Xte, ytra, yte
 
 
 ###
@@ -119,6 +133,14 @@ def GetLSVCInstance(seed=0):
 
 
 ###
+# Scoreを表示
+###
+def showScore(model, test, label, name):
+    score = model.score(test, label)
+    print(name + ":" + str(score))
+
+
+###
 # Predict and Save result to csv
 ###
 def SaveTitanicPredictToCsv(model, test, name):
@@ -144,26 +166,39 @@ test_df = pd.read_csv("./data/test.csv", header=0)
 # 前処理
 train_df = Preprocessing(train_df)
 test_df = Preprocessing(test_df)
+train_y = train_df['Survived']
+train_x = train_df.iloc[:, 2:]
+tsize = 0.2
+tr_x, te_x, tr_y, te_y = splitTrainSet(train_x, train_y, tsize)
 
 # Learn
 # Random Forest
 rf = GetRFInstance()
-rf.fit(train_df.iloc[:, 2:], train_df['Survived'])
+rf.fit(tr_x, tr_y)
 
 # Extra Trees
 et = GetETInstance()
-et.fit(train_df.iloc[:, 2:], train_df['Survived'])
+et.fit(tr_x, tr_y)
 
 # RBFSVC
 rbfsvc = GetRBFSVCInstance()
-rbfsvc.fit(train_df.iloc[:, 2:], train_df['Survived'])
+rbfsvc.fit(tr_x, tr_y)
 
 # LSVC
 lsvc = GetLSVCInstance()
-lsvc.fit(train_df.iloc[:, 2:], train_df['Survived'])
+lsvc.fit(tr_x, tr_y)
 
+# Score
+if(tsize != 0.0):
+    showScore(rf, te_x, te_y, "RF")
+    showScore(et, te_x, te_y, "ET")
+    showScore(rbfsvc, te_x, te_y, "RBFSVC")
+    showScore(lsvc, te_x, te_y, "LSVC")
+
+'''
 # Predict
 SaveTitanicPredictToCsv(rf, test_df, "RF")
 SaveTitanicPredictToCsv(et, test_df, "ET")
 SaveTitanicPredictToCsv(rbfsvc, test_df, "RSVC")
 SaveTitanicPredictToCsv(lsvc, test_df, "LSVC")
+'''

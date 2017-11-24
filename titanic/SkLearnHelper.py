@@ -10,6 +10,9 @@ class SklearnHelper(object):
     def predict(self, x):
         return self.clf.predict(x)
 
+    def score(self, x, y):
+        return self.clf.score(x, y)
+
     def fit(self, x, y):
         return self.clf.fit(x, y)
 
