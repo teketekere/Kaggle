@@ -18,9 +18,11 @@ def Preprocessing(data):
     data['Embarked'] = PreproEmbarked(data['Embarked'])
     data['Nameband'] = PreproNameband(data['Name'])
     data['Age'] = PreproAge(data['Age'], data['Nameband'])
-    data['Fare'] = data['Fare'].fillna(data['Fare'].mean())
+    data['Fare'] = data['Fare'].fillna(data['Fare'].median())
     data["Sex"] = data["Sex"].map({"female": 0, "male": 1}).astype(int)
     data['FamilySize'] = data['SibSp'] + data['Parch']
+    data['IsAlone'] = 0
+    data.loc[data['FamilySize'] == 0, 'IsAlone'] = 1
     data = data.drop('Name', axis=1)
     data = data.drop('Ticket', axis=1)
     data = data.drop('Cabin', axis=1)
