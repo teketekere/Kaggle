@@ -3,8 +3,8 @@ import datetime
 import pandas as pd
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.ensemble import RandomForestClassifier
-# from sklearn.ensemble import AdaBoostClassifier
-# from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 # from sklearn.cross_validation import KFold
@@ -21,6 +21,9 @@ def Preprocessing(data):
     data['Fare'] = data['Fare'].fillna(data['Fare'].median())
     data["Sex"] = data["Sex"].map({"female": 0, "male": 1}).astype(int)
     data['FamilySize'] = data['SibSp'] + data['Parch']
+    data['Cabin'] = data['Cabin'].apply(lambda x: str(x)[0])
+    cabmap = {'A': 1, 'B': 1,'C': 1, 'D': 1, 'E': 1, 'F': 1, 'G': 1, 'T': 1, 'n': 0}
+    data['Cabin'] = data['Cabin'].map(cabmap).astype(int)
     data['IsAlone'] = 0
     data.loc[data['FamilySize'] == 0, 'IsAlone'] = 1
     data = data.drop('Name', axis=1)
@@ -118,7 +121,8 @@ def GetRBFSVCInstance(seed=0):
     # Support Vector Classifier parameters
     svc_params = {
         'kernel': 'rbf',
-        'C': 0.025
+        'C': 1,
+        'gamma': 0.1
         }
     svc = SklearnHelper(clf=SVC, seed=seed, params=svc_params)
     return svc
@@ -128,10 +132,33 @@ def GetLSVCInstance(seed=0):
     # Support Vector Classifier parameters
     svc_params = {
         'kernel': 'linear',
-        'C': 0.025
+        'C': 0.1,
+        'gamma': 0.1
         }
     svc = SklearnHelper(clf=SVC, seed=seed, params=svc_params)
     return svc
+
+
+def GetAdaInstance(seed=0):
+    # AdaBoost parameters
+    ada_params = {
+    'n_estimators': 500,
+    'learning_rate': 0.75
+    }
+    ada = SklearnHelper(clf=AdaBoostClassifier, seed=seed, params=ada_params)
+    return ada
+
+
+def GetGBInstance(seed=0):
+    # Gradient Boosting parameters
+    gb_params = {
+    'n_estimators': 500,
+    'max_depth': 5,
+    'min_samples_leaf': 2,
+    'verbose': 0
+    }
+    gb = SklearnHelper(clf=GradientBoostingClassifier, seed=seed, params=gb_params)
+    return gb
 
 
 ###
@@ -148,8 +175,9 @@ def showScore(model, test, label, name):
 def SaveTitanicPredictToCsv(model, test, name):
     pid = test['PassengerId']
     pred = list()
-    for i in range(len(test)):
-        pred.append(*model.predict(test.iloc[i:i+1, 1:]))
+    #for i in range(len(test)):
+    #    pred.append(*model.predict(test.iloc[i:i+1, 1:]))
+    pred = model.predict(test.iloc[:, 1:])
     output = pd.DataFrame({'Survived': pred})
     output['PassengerId'] = pid
     d = datetime.datetime.now()
@@ -190,17 +218,29 @@ rbfsvc.fit(tr_x, tr_y)
 lsvc = GetLSVCInstance()
 lsvc.fit(tr_x, tr_y)
 
+# AdaBoost
+ada = GetAdaInstance()
+ada.fit(tr_x, tr_y)
+
+# XGBboosting
+gb = GetGBInstance()
+gb.fit(tr_x, tr_y)
+
 # Score
 if(tsize != 0.0):
     showScore(rf, te_x, te_y, "RF")
     showScore(et, te_x, te_y, "ET")
     showScore(rbfsvc, te_x, te_y, "RBFSVC")
     showScore(lsvc, te_x, te_y, "LSVC")
+    showScore(ada, te_x, te_y, "ADA")
+    showScore(gb, te_x, te_y, "GB")
 
-'''
+
 # Predict
+
 SaveTitanicPredictToCsv(rf, test_df, "RF")
-SaveTitanicPredictToCsv(et, test_df, "ET")
-SaveTitanicPredictToCsv(rbfsvc, test_df, "RSVC")
-SaveTitanicPredictToCsv(lsvc, test_df, "LSVC")
-'''
+# SaveTitanicPredictToCsv(et, test_df, "ET")
+# SaveTitanicPredictToCsv(rbfsvc, test_df, "RSVC")
+# SaveTitanicPredictToCsv(lsvc, test_df, "LSVC")
+SaveTitanicPredictToCsv(ada, test_df, "Ada")
+SaveTitanicPredictToCsv(gb, test_df, "GB")
