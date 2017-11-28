@@ -1,10 +1,10 @@
 import csv
 import datetime
 import pandas as pd
-from sklearn.ensemble import ExtraTreesClassifier
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 # from sklearn.cross_validation import KFold
@@ -22,13 +22,16 @@ def Preprocessing(data):
     data["Sex"] = data["Sex"].map({"female": 0, "male": 1}).astype(int)
     data['FamilySize'] = data['SibSp'] + data['Parch']
     data['Cabin'] = data['Cabin'].apply(lambda x: str(x)[0])
-    cabmap = {'A': 1, 'B': 1,'C': 1, 'D': 1, 'E': 1, 'F': 1, 'G': 1, 'T': 1, 'n': 0}
-    data['Cabin'] = data['Cabin'].map(cabmap).astype(int)
+    cabMap = {'A': 1, 'B': 2, 'C': 2, 'D': 2, 'E': 2, 'F': 1, 'G': 1, 'T': 1}
+    cabMap.update({'n': 0})
+    data['Cabin'] = data['Cabin'].map(cabMap).astype(int)
     data['IsAlone'] = 0
     data.loc[data['FamilySize'] == 0, 'IsAlone'] = 1
+    data['Ticket'] = data['Ticket'].apply(lambda x: len(x))
+    # data['FamilyName'] = PreproFamilyName(data['Name'])
     data = data.drop('Name', axis=1)
-    data = data.drop('Ticket', axis=1)
-    data = data.drop('Cabin', axis=1)
+    # data = data.drop('Ticket', axis=1)
+    # data = data.drop('Cabin', axis=1)
     return data
 
 
@@ -72,6 +75,24 @@ def transAge(cls):
     else:
         ret = 0
     return ret
+
+
+def PreproFamilyName(data):
+    dataf = data.apply(lambda x: str(x).split()[0])
+    datan = dataf
+    famnameClass = {}
+    for i in range(len(dataf)):
+        # dame
+        if(not famnameClass.keys()):
+            famnameClass[dataf[i]] = 0
+            datan[i] = famnameClass[dataf[i]]
+
+        if(dataf[i] in famnameClass.keys()):
+            datan[i] = famnameClass[dataf[i]]
+        else:
+            famnameClass[dataf[i]] = max(famnameClass.values()) + 1
+            datan[i] = famnameClass[dataf[i]]
+    return datan
 
 
 ###
@@ -122,7 +143,7 @@ def GetRBFSVCInstance(seed=0):
     svc_params = {
         'kernel': 'rbf',
         'C': 1,
-        'gamma': 0.1
+        'gamma': 0.01
         }
     svc = SklearnHelper(clf=SVC, seed=seed, params=svc_params)
     return svc
@@ -133,7 +154,7 @@ def GetLSVCInstance(seed=0):
     svc_params = {
         'kernel': 'linear',
         'C': 0.1,
-        'gamma': 0.1
+        'gamma': 0.01
         }
     svc = SklearnHelper(clf=SVC, seed=seed, params=svc_params)
     return svc
@@ -142,8 +163,8 @@ def GetLSVCInstance(seed=0):
 def GetAdaInstance(seed=0):
     # AdaBoost parameters
     ada_params = {
-    'n_estimators': 500,
-    'learning_rate': 0.75
+        'n_estimators': 500,
+        'learning_rate': 0.75
     }
     ada = SklearnHelper(clf=AdaBoostClassifier, seed=seed, params=ada_params)
     return ada
@@ -151,13 +172,13 @@ def GetAdaInstance(seed=0):
 
 def GetGBInstance(seed=0):
     # Gradient Boosting parameters
-    gb_params = {
-    'n_estimators': 500,
-    'max_depth': 5,
-    'min_samples_leaf': 2,
-    'verbose': 0
+    gb_p = {
+        'n_estimators': 500,
+        'max_depth': 5,
+        'min_samples_leaf': 2,
+        'verbose': 0
     }
-    gb = SklearnHelper(clf=GradientBoostingClassifier, seed=seed, params=gb_params)
+    gb = SklearnHelper(clf=GradientBoostingClassifier, seed=seed, params=gb_p)
     return gb
 
 
@@ -175,8 +196,6 @@ def showScore(model, test, label, name):
 def SaveTitanicPredictToCsv(model, test, name):
     pid = test['PassengerId']
     pred = list()
-    #for i in range(len(test)):
-    #    pred.append(*model.predict(test.iloc[i:i+1, 1:]))
     pred = model.predict(test.iloc[:, 1:])
     output = pd.DataFrame({'Survived': pred})
     output['PassengerId'] = pid
@@ -198,7 +217,7 @@ train_df = Preprocessing(train_df)
 test_df = Preprocessing(test_df)
 train_y = train_df['Survived']
 train_x = train_df.iloc[:, 2:]
-tsize = 0.2
+tsize = 0.0
 tr_x, te_x, tr_y, te_y = splitTrainSet(train_x, train_y, tsize)
 
 # Learn
@@ -222,7 +241,7 @@ lsvc.fit(tr_x, tr_y)
 ada = GetAdaInstance()
 ada.fit(tr_x, tr_y)
 
-# XGBboosting
+# GradientBoosting
 gb = GetGBInstance()
 gb.fit(tr_x, tr_y)
 
