@@ -28,10 +28,7 @@ def Preprocessing(data):
     data['IsAlone'] = 0
     data.loc[data['FamilySize'] == 0, 'IsAlone'] = 1
     data['Ticket'] = data['Ticket'].apply(lambda x: len(x))
-    # data['FamilyName'] = PreproFamilyName(data['Name'])
-    data = data.drop('Name', axis=1)
-    # data = data.drop('Ticket', axis=1)
-    # data = data.drop('Cabin', axis=1)
+    # data = data.drop('Name', axis=1)
     return data
 
 
@@ -77,22 +74,21 @@ def transAge(cls):
     return ret
 
 
-def PreproFamilyName(data):
-    dataf = data.apply(lambda x: str(x).split()[0])
-    datan = dataf
+def PreproFamilyName(tr, te):
+    data = pd.concat([tr, te], ignore_index=True)
+    data = data.apply(lambda x: str(x).split()[0])
+    datan = data
     famnameClass = {}
-    for i in range(len(dataf)):
-        # dame
-        if(not famnameClass.keys()):
-            famnameClass[dataf[i]] = 0
-            datan[i] = famnameClass[dataf[i]]
-
-        if(dataf[i] in famnameClass.keys()):
-            datan[i] = famnameClass[dataf[i]]
+    famnameClass[data[0]] = 0
+    for i in range(len(data)):
+        if(data[i] in famnameClass.keys()):
+            datan[i] = famnameClass[data[i]]
         else:
-            famnameClass[dataf[i]] = max(famnameClass.values()) + 1
-            datan[i] = famnameClass[dataf[i]]
-    return datan
+            famnameClass[data[i]] = max(famnameClass.values()) + 1
+            datan[i] = famnameClass[data[i]]
+    r1 = data[0:len(tr)]
+    r2 = data[len(tr):]
+    return [r1, r2.reset_index()]
 
 
 ###
@@ -119,8 +115,7 @@ def GetRFInstance(seed=0):
         'max_depth': 6,
         'min_samples_leaf': 2,
         'max_features': 'sqrt',
-        'verbose': 0
-    }
+        'verbose': 0}
     rf = SklearnHelper(clf=RandomForestClassifier, seed=seed, params=rf_params)
     return rf
 
@@ -132,8 +127,7 @@ def GetETInstance(seed=0):
         'n_estimators': 500,
         'max_depth': 8,
         'min_samples_leaf': 2,
-        'verbose': 0
-    }
+        'verbose': 0}
     et = SklearnHelper(clf=ExtraTreesClassifier, seed=seed, params=et_params)
     return et
 
@@ -143,8 +137,7 @@ def GetRBFSVCInstance(seed=0):
     svc_params = {
         'kernel': 'rbf',
         'C': 1,
-        'gamma': 0.01
-        }
+        'gamma': 0.01}
     svc = SklearnHelper(clf=SVC, seed=seed, params=svc_params)
     return svc
 
@@ -154,8 +147,7 @@ def GetLSVCInstance(seed=0):
     svc_params = {
         'kernel': 'linear',
         'C': 0.1,
-        'gamma': 0.01
-        }
+        'gamma': 0.01}
     svc = SklearnHelper(clf=SVC, seed=seed, params=svc_params)
     return svc
 
@@ -164,8 +156,7 @@ def GetAdaInstance(seed=0):
     # AdaBoost parameters
     ada_params = {
         'n_estimators': 500,
-        'learning_rate': 0.75
-    }
+        'learning_rate': 0.75}
     ada = SklearnHelper(clf=AdaBoostClassifier, seed=seed, params=ada_params)
     return ada
 
@@ -176,8 +167,7 @@ def GetGBInstance(seed=0):
         'n_estimators': 500,
         'max_depth': 5,
         'min_samples_leaf': 2,
-        'verbose': 0
-    }
+        'verbose': 0}
     gb = SklearnHelper(clf=GradientBoostingClassifier, seed=seed, params=gb_p)
     return gb
 
@@ -215,6 +205,9 @@ test_df = pd.read_csv("./data/test.csv", header=0)
 # 前処理
 train_df = Preprocessing(train_df)
 test_df = Preprocessing(test_df)
+trn = train_df['Name']
+ten = test_df['Name']
+train_df['Name'], test_df['Name'] = PreproFamilyName(trn, ten)
 train_y = train_df['Survived']
 train_x = train_df.iloc[:, 2:]
 tsize = 0.0
@@ -253,13 +246,11 @@ if(tsize != 0.0):
     showScore(lsvc, te_x, te_y, "LSVC")
     showScore(ada, te_x, te_y, "ADA")
     showScore(gb, te_x, te_y, "GB")
-
-
-# Predict
-
-SaveTitanicPredictToCsv(rf, test_df, "RF")
-# SaveTitanicPredictToCsv(et, test_df, "ET")
-# SaveTitanicPredictToCsv(rbfsvc, test_df, "RSVC")
-# SaveTitanicPredictToCsv(lsvc, test_df, "LSVC")
-SaveTitanicPredictToCsv(ada, test_df, "Ada")
-SaveTitanicPredictToCsv(gb, test_df, "GB")
+else:
+    # Predict
+    SaveTitanicPredictToCsv(rf, test_df, "RF")
+    SaveTitanicPredictToCsv(et, test_df, "ET")
+    # SaveTitanicPredictToCsv(rbfsvc, test_df, "RSVC")
+    # SaveTitanicPredictToCsv(lsvc, test_df, "LSVC")
+    SaveTitanicPredictToCsv(ada, test_df, "Ada")
+    SaveTitanicPredictToCsv(gb, test_df, "GB")
